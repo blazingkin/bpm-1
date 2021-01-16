@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
-
+import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.nio.file.Files;
 
 
 public class PackageManager
@@ -178,7 +180,6 @@ public class PackageManager
             try
             {
                 heartbeatInfo = Heartbeat.readHeartbeatFile(pkgName + "/heartbeat.yaml");
-
                 // initialize fields for new heartbeat.lock
                 newLock.setName(heartbeatInfo.getName());
                 newLock.setVersion(heartbeatInfo.getVersion());
@@ -214,29 +215,10 @@ public class PackageManager
             // for each element in the diff: find an appropriate version
             for (String diffPkg : diff.keySet())
             {
-                try
-                {
-                    List<PulseEntry> pulse = CdvsUtils.getPulse(diffPkg);
-                    Collections.sort(pulse);
-
-                    for (PulseEntry entry : pulse)
-                    {
-                        Package pkg = diff.get(diffPkg);
-                        if (pkg.inVersionRange(entry.version))
-                        {
-                            // download package
-                            CdvsUtils.downloadPackage(entry.url, diffPkg);
-                            // put this package on the stack so its deps can be analyzed
-                            unparsedPkgs.push("Packages/" + diffPkg);
-                            // update new lock with downloaded package
-                            newLock.getDeps().putPackageIntoEnv(env, diffPkg, entry.version);
-                            break;
-                        }
-                    }
-                }
-                catch (IOException e)
-                {
-                    System.err.println("bpm: beat: WARNING: Unable to retrieve package " + diffPkg);
+                if (isInLocalPackages(diffPkg)) {
+                    fetchLocal(diffPkg, diff, unparsedPkgs, newLock, env);
+                } else {
+                    fetch(diffPkg, diff, unparsedPkgs, newLock, env);
                 }
             }
 
@@ -257,6 +239,55 @@ public class PackageManager
      * currently infeasible due to Rails' CSRF protection
      */
 
+    private static boolean isInLocalPackages(String packageName) {
+        return Files.exists(InstalledPackageBase().resolve(packageName));
+    }
+
+    private static void fetch(String diffPackage, Map<String, Package> diff, 
+                              Stack<String> unparsedPkgs, Heartbeat newLock,
+                              String env) {
+        try
+        {
+            List<PulseEntry> pulse = CdvsUtils.getPulse(diffPackage);
+            Collections.sort(pulse);
+
+            for (PulseEntry entry : pulse)
+            {
+                Package pkg = diff.get(diffPackage);
+                if (pkg.inVersionRange(entry.version))
+                {
+                    // download package
+                    CdvsUtils.downloadPackage(entry.url, diffPackage);
+                    // put this package on the stack so its deps can be analyzed
+                    unparsedPkgs.push("Packages/" + diffPackage);
+                    // update new lock with downloaded package
+                    newLock.getDeps().putPackageIntoEnv(env, diffPackage, entry.version);
+                    break;
+                }
+            }
+        }
+        catch (IOException e)
+        {
+            System.err.println("bpm: beat: WARNING: Unable to retrieve package " + diffPackage);
+        }
+    }
+
+
+    private static void fetchLocal(String diffPackage, Map<String, Package> diff, 
+                              Stack<String> unparsedPkgs, Heartbeat newLock,
+                              String env) {
+        try
+        {
+            Path packageLocation = InstalledPackageBase().resolve(diffPackage);
+            CoreSymlink.Link(Paths.get("Packages", diffPackage), packageLocation);
+
+            newLock.getDeps().putPackageIntoEnv(env, diffPackage, "latest");
+        }
+        catch (IOException e)
+        {
+            System.err.println("bpm: beat: WARNING: Unable to retrieve package " + diffPackage);
+        }
+    }
 
     private static void pump()
     {
@@ -296,6 +327,18 @@ public class PackageManager
         }
     }
 
+    public static Path InstalledPackageBase() {
+        // core packages location is set by environment variable when BLZ is installed
+        String packagesPathName = System.getenv("BLZPACKAGES");
+        // if the path name is null, the variable is not defined
+        if (packagesPathName == null)
+        {
+            System.err.println(
+                    "bpm: beat: ERROR: Environment variable BLZPACKAGES not set. Is BLZ installed on this machine?");
+            System.exit(1);
+        }
 
+        return Paths.get(packagesPathName);
+    }
 
 }

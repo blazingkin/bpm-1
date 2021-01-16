@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.yaml.snakeyaml.TypeDescription;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 public class Heartbeat
@@ -13,7 +14,7 @@ public class Heartbeat
     // instance variables
     private String name;
     private String version;
-    private Dependencies deps;
+    public Dependencies deps;
 
     // JavaBeans constructor
     public Heartbeat()
@@ -114,7 +115,10 @@ public class Heartbeat
                         diff.put(dep, pkg);
                     }
                 }
-                }
+            } else {
+                Package pkg = envDeps.get(dep);
+                diff.put(dep, pkg);
+            }
         }
 
         return diff;
@@ -211,9 +215,15 @@ public class Heartbeat
 
         Yaml yaml = new Yaml(constructor);
         InputStream input = new FileInputStream(path);
-
-        Heartbeat beat = yaml.load(input);
-        return beat;
+        try {
+            return yaml.load(input);
+        } catch (YAMLException e) {
+            e.printStackTrace();
+            System.out.println("Invalid heartbeat YAML");
+            System.exit(1);
+        }
+        // Should be unreachable
+        return null;
     }
 
 }

@@ -13,25 +13,17 @@ class CoreSymlink
     {
         // create symbolic link to core packages directory in "Packages" directory
 
-        // core packages location is set by environment variable when BLZ is installed
-        String blzVar = "BLZPACKAGES";
 
-        // read the environment variable
-        String packagesPathName = System.getenv(blzVar);
-
-        // if the path name is null, the variable is not defined
-        if (packagesPathName == null)
-        {
-            System.err.println(
-                    "bpm: beat: ERROR: Environment variable " + blzVar + " not set. Is BLZ installed on this machine?");
-            System.exit(1);
-        }
+        Path packageBase = PackageManager.InstalledPackageBase();
 
         // create Path objects for the core path and the destination path
-        Path corePath = Paths.get(packagesPathName, "Core");
+        Path corePath = packageBase.resolve("Core");
         Path destPath = Paths.get(pathName,"Core").toAbsolutePath();
+        Link(destPath, corePath);
+    }
 
 
+    public static void Link(Path newFile, Path linkTo) throws IOException {
         /* Windows requires admin rights to create symbolic links -
          * if the user is running Windows, copy the core packages directory instead
          */
@@ -41,7 +33,7 @@ class CoreSymlink
         {
             // Non-Windows OSes - create symbolic link
             try {
-                Files.createSymbolicLink(destPath, corePath);
+                Files.createSymbolicLink(newFile, linkTo);
             } catch (FileAlreadyExistsException e) {
                 // If the file exists, great. Continue
             } 
@@ -49,7 +41,7 @@ class CoreSymlink
         else
         {
             // Windows - copy core packages directory and its contents
-            FileUtils.copyDirectory(corePath.toFile(), destPath.toFile());
+            FileUtils.copyDirectory(linkTo.toFile(), newFile.toFile());
         }
     }
 }

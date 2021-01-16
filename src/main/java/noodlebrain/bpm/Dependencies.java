@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Dependencies {
-    private Map<String, Package> dev;
+    public Map<String, Package> dev;
     private Map<String, Package> test;
     private Map<String, Package> prod;
 
