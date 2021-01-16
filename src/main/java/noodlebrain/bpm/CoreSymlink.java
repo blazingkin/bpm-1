@@ -2,6 +2,7 @@ package noodlebrain.bpm;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.io.FileUtils;
@@ -39,7 +40,11 @@ class CoreSymlink
         if (!os.contains("Windows"))
         {
             // Non-Windows OSes - create symbolic link
-            Files.createSymbolicLink(corePath, destPath);
+            try {
+                Files.createSymbolicLink(destPath, corePath);
+            } catch (FileAlreadyExistsException e) {
+                // If the file exists, great. Continue
+            } 
         }
         else
         {
