@@ -5,8 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
+
+
 public class PackageManager
 {
+
+    public final static int BPM_VERSION_MAJOR = 1;
+    public final static int BPM_VERSION_MINOR = 0;
+    public final static int BPM_VERSION_PATCH = 0;
+
     public static void main(String[] args)
     {
         parseArgs(args);
@@ -39,8 +46,8 @@ public class PackageManager
             // beat - checks heartbeat vs installed packages and installs necessary packages
             if (args.length < 2)
             {
-                System.err.println("Usage: bpm beat env");
-                System.exit(126);
+                System.err.println("No enviroment given: assuming development");
+                beat("dev");
             }
             else
             {
@@ -55,7 +62,21 @@ public class PackageManager
         }
         else if (args[0].equals("help"))
         {
-
+            System.out.println("bpm " + BPM_VERSION_MAJOR + "." + BPM_VERSION_MINOR + "." + BPM_VERSION_PATCH);
+            System.out.println("====================");
+            System.out.println("The blz package manager");
+            System.out.println("");
+            System.out.println("");
+            System.out.println("Update packages");
+            System.out.println("=========");
+            System.out.println("bpm beat [environment]");
+            System.out.println("    This updates local versions of packages to match the heartbeat.yaml");
+            System.out.println("");
+            System.out.println("Project creation");
+            System.out.println("=========");
+            System.out.println("bpm init [directory]");
+            System.out.println("    This creates a new project folder in the given directory");
+            System.out.println("    or in the current directory if none is specified");
         }
         else
         {
